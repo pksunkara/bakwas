@@ -1,0 +1,22 @@
+#ifndef CONSTANT_H
+#define CONSTANTS_H
+
+#define CHATMAX 256
+
+#define CLIENTS 5
+
+#define INITCODE "10001"
+#define CHATCODE "10002"
+#define EXITCODE "10003"
+#define SERVCODE "10004"
+#define ERROCODE "10005"
+
+#define CODELENGTH 5
+
+#define SERVER_RECVPORT 10801
+#define SERVER_SENDPORT 10901
+
+#define CLIENT_RECVPORT 10901
+#define CLIENT_SENDPORT 10801
+
+#endif
