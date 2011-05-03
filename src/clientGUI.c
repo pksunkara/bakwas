@@ -2,12 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ncurses.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
 #include "constants.h"
 #include "langs.h"
+
+WINDOW *room;
+WINDOW *input;
 
 void die(char *msg) {
 	perror(msg);
@@ -27,7 +31,7 @@ int getLang(char *lang) {
 
 void transliterate(char *chat, int lang) {
 	int i=0,j=0;
-	char *buf = malloc((strlen(chat)+10)*sizeof(char));
+	char *buf = malloc(strlen(chat)*sizeof(char));
 	char *charBuf = malloc(sizeof(char));
 	buf[0] = '\0';
 	for(;i<strlen(chat);i++) {
@@ -163,11 +167,15 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 	
+	initscr();
+	start_color();
+	
 	pid = fork();
 	if(pid==0)
 		chatSend(argv[1],argv[2]);
 	else
 		chatRecv(argv[1],argv[3]);
-	
+
+	endwin();	
 	return EXIT_SUCCESS;
 }

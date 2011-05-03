@@ -10,6 +10,8 @@
 struct client {
 	struct sockaddr_in addr;
 	int running;
+	char *name;
+	int color;
 };
 
 int sendSock, recvSock;
@@ -19,12 +21,15 @@ void die(char *msg) {
 	exit(EXIT_FAILURE);
 }
 
-int initClient(struct sockaddr_in c, struct client *cs) {
+int initClient(struct sockaddr_in c, struct client *cs, char *name) {
 	int i=0,flag=0;
 	for(;i<CLIENTS;i++) {
 		if(cs[i].running==0) {
 			cs[i].addr = c;
 			cs[i].running = 1;
+			cs[i].color = i+1;
+			cs[i].name = malloc(10*sizeof(char));
+			strcpy(cs[i].name,name);
 			flag = 1;
 			break;
 		}
@@ -32,35 +37,75 @@ int initClient(struct sockaddr_in c, struct client *cs) {
 	return flag;
 }
 
-void killClient(struct sockaddr_in c, struct client *cs) {
+void killClient(struct sockaddr_in c, struct client *cs, char *name) {
 	int i=0;
+	char *addr = malloc(15*sizeof(char));
+	strcpy(addr,inet_ntoa(c.sin_addr));
 	for(;i<CLIENTS;i++) {
-		if(cs[i].running==1 && strcmp(inet_ntoa(c.sin_addr),inet_ntoa(cs[i].addr.sin_addr))==0) {
-			cs[i].running = 0;
+		if(cs[i].running==1) {
+			if(strcmp(addr,inet_ntoa(cs[i].addr.sin_addr))==0) {
+				cs[i].running = 0;
+				if(cs[i].name!=NULL) {
+					strcpy(name,cs[i].name);
+					free(cs[i].name);
+				}
+				break;
+			}
 		}
 	}
+	if(addr!=NULL)
+		free(addr);
 	return;
 }
 
 void echo(char *msg, char *code, struct client *c) {
 	int i=0;
 	char *buf = malloc((strlen(msg)+10)*sizeof(char));
-	strcat(buf,code);
+	strcpy(buf,code);
 	strcat(buf,msg);
 	for(;i<CLIENTS && c[i].running==1;i++) {
 		sendto(sendSock, buf, CHATMAX, 0, (struct sockaddr *)&(c[i].addr), sizeof(c[i].addr));
 	}
 	printf("%s\n",buf);
-	free(buf);
+	if(buf!=NULL)
+		free(buf);
 	return;
 }
 
 void sendClient(char *msg, char *code, struct sockaddr_in c) {
 	char *buf = malloc((strlen(msg)+10)*sizeof(char));
-	strcat(buf,code);
+	strcpy(buf,code);
 	strcat(buf,msg);
 	sendto(sendSock, buf, CHATMAX, 0, (struct sockaddr *)&c, sizeof(c));
-	free(buf);
+	if(buf!=NULL)
+		free(buf);
+	return;
+}
+
+void customClient(char *msg, struct sockaddr_in c, struct client *cs) {
+	int i=0;
+	char *buf = malloc((strlen(msg)+20)*sizeof(char));
+	char *code = malloc(5*sizeof(char));
+	char *addr = malloc(15*sizeof(char));
+	strcpy(addr,inet_ntoa(c.sin_addr));
+	for(;i<CLIENTS;i++) {
+		if(cs[i].running==1) {
+			if(strcmp(addr,inet_ntoa(cs[i].addr.sin_addr))==0) {
+				strcpy(buf,cs[i].name);
+				break;
+			}
+		}
+	}
+	code[0] = (char)(i+49);
+	strcat(code,"0002");
+	strcat(buf,": ");
+	strcat(buf,msg);
+	strcpy(msg,buf);
+	if(buf!=NULL)
+		free(buf);
+	if(addr!=NULL)
+		free(addr);
+	echo(msg,code,cs);
 	return;
 }
 
@@ -94,7 +139,7 @@ int main(int argc, char **argv) {
 	/* Bind to the local address */
 	if(bind(recvSock, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0)
 		die("bind() failed");
-	
+
 	while(1) {
 		clientAddrSize = sizeof(clientAddr);
 		if((msgLen = recvfrom(recvSock, msg, CHATMAX, 0, (struct sockaddr *)&clientAddr, &clientAddrSize)) < 0)
@@ -104,27 +149,32 @@ int main(int argc, char **argv) {
 		}
 		code[CODELENGTH] = '\0';
 		for(i=CODELENGTH;i<msgLen;i++) {
-			msg[i-CODELENGTH] = msg[i];
+			if(msg[i]!='\n')
+				msg[i-CODELENGTH] = msg[i];
+			else
+				msg[i-CODELENGTH] = '\0';
 		}
-		msg[msgLen-CODELENGTH] = '\0';
 		clientAddr.sin_port = htons(SERVER_SENDPORT);
 		switch(atoi(code)%10000) {
 			case 1:
-				if(initClient(clientAddr, clients)==1) {
-					strcpy(msg,inet_ntoa(clientAddr.sin_addr));
-					echo(strcat(msg," joined"),SERVCODE,clients);
+				if(initClient(clientAddr, clients, msg)==1) {
+					strcat(msg," (");
+					strcat(msg,inet_ntoa(clientAddr.sin_addr));
+					echo(strcat(msg,") joined"),SERVCODE,clients);
 				} else {
 					sendClient("Server is full. Try again",ERROCODE,clientAddr);
 				}
 				break;
 			case 2:
-				echo(msg,CHATCODE,clients);
+				customClient(msg,clientAddr,clients);
 				break;
 			case 3:
 				msg[0] = '\0';
-				strcpy(msg,inet_ntoa(clientAddr.sin_addr));
-				echo(strcat(msg, " quit"),SERVCODE,clients);
-				killClient(clientAddr, clients);
+				sendClient("Good Bye!",EXITCODE,clientAddr);
+				killClient(clientAddr, clients, msg);
+				strcat(msg," (");
+				strcat(msg,inet_ntoa(clientAddr.sin_addr));
+				echo(strcat(msg, ") quit"),SERVCODE,clients);
 				break;
 			default:
 				break;

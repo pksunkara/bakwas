@@ -4,17 +4,20 @@ SRC=./src/
 INC=./include/
 
 CC= gcc
-CFLAGS= -Wall -pedantic -g -I$(INC)
+CFLAGS= -Wall -pedantic -lncurses -std=c99 -g -I$(INC)
 
-all: $(BIN)server $(BIN)client
+all: $(BIN)server $(BIN)client $(BIN)clientGUI
 
-$(BIN)client: $(OBJ)client.o
+$(BIN)client: $(OBJ)client.o $(OBJ)langs.o
 	$(CC) $(CFLAGS) $^ -o $@
 
 $(BIN)server: $(OBJ)server.o
 	$(CC) $(CFLAGS) $^ -o $@
 
-$(OBJ)%.o: $(SRC)%.c $(INC)constants.h
+$(BIN)clientGUI: $(OBJ)clientGUI.o $(OBJ)langs.o
+	$(CC) $(CFLAGS) $^ -o $@
+
+$(OBJ)%.o: $(SRC)%.c $(INC)constants.h $(INC)langs.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
