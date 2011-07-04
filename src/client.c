@@ -2,12 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
 #include "constants.h"
 #include "langs.h"
+
+char *serverip;
 
 void die(char *msg) {
 	perror(msg);
@@ -57,7 +60,7 @@ void transliterate(char *chat, int lang) {
 	return;
 }
 
-void chatRecv(char *ip, char *lang) {
+void *chatRecv(void *lang) {
 	int recvSock, recvChatLen;
 	int i;
 	unsigned int clientAddrSize;
@@ -110,10 +113,9 @@ void chatRecv(char *ip, char *lang) {
 	}
 	
 	close(recvSock);
-	return;
 }
 
-void chatSend(char *ip, char *name) {
+void *chatSend(void *name) {
 	int sendSock;
 	char chat[CHATMAX];
 	char *buf;
@@ -125,7 +127,7 @@ void chatSend(char *ip, char *name) {
 	/* Construct the server address structure */
 	memset(&servAddr, 0, sizeof(servAddr));	/* Zero out structure */
 	servAddr.sin_family = AF_INET;			/* Internet addr family */
-	servAddr.sin_addr.s_addr = inet_addr(ip);	/* Server IP address */	
+	servAddr.sin_addr.s_addr = inet_addr(serverip);	/* Server IP address */
 	servAddr.sin_port = htons(CLIENT_SENDPORT);	/* Server port */
 	
 	buf = malloc((strlen(name)+10)*sizeof(char));
@@ -151,11 +153,10 @@ void chatSend(char *ip, char *name) {
 	}
 
 	close(sendSock);
-	return;
 }
 
 int main(int argc, char **argv) {
-	pid_t pid;
+	pthread_t recv, send;
 
 	if(argc!=4) {
 		printf("Usage: %s <server_ip> <username> <lang>\n",argv[0]);
@@ -163,11 +164,14 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 	
-	pid = fork();
-	if(pid==0)
-		chatSend(argv[1],argv[2]);
-	else
-		chatRecv(argv[1],argv[3]);
+	serverip = malloc(20*sizeof(char));
+	strcpy(serverip,argv[1]);
+
+	pthread_create(&send,NULL,&chatSend,argv[2]);
+	pthread_create(&recv,NULL,&chatRecv,argv[3]);
+
+	pthread_join(send,NULL);
+	pthread_join(recv,NULL);
 	
 	return EXIT_SUCCESS;
 }

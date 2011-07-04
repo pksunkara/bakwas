@@ -4,7 +4,7 @@ SRC=./src/
 INC=./include/
 
 CC= gcc
-CFLAGS= -Wall -pedantic -lncurses -std=c99 -g -I$(INC)
+CFLAGS= -Wall -pedantic -lncurses -lpthread -std=c99 -g -I$(INC)
 
 all: $(BIN)server $(BIN)client $(BIN)clientGUI
 
