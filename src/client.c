@@ -73,10 +73,10 @@ void *chatRecv(void *lang) {
 	if((recvSock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
 		die("socket() failed");
 	/* Construct the server address structure */
-	memset(&servAddr, 0, sizeof(servAddr));	/* Zero out structure */
-	servAddr.sin_family = AF_INET;			/* Internet addr family */
-	servAddr.sin_addr.s_addr = htonl(INADDR_ANY);	/* Server IP address */	
-	servAddr.sin_port = htons(CLIENT_RECVPORT);	/* Server port */
+	memset(&servAddr, 0, sizeof(servAddr));
+	servAddr.sin_family = AF_INET;
+	servAddr.sin_addr.s_addr = htonl(INADDR_ANY);	
+	servAddr.sin_port = htons(CLIENT_RECVPORT);
 	/* Bind to the local address */
 	if(bind(recvSock, (struct sockaddr *)&servAddr, sizeof(servAddr)) < 0)
 		die("bind() failed");
@@ -125,10 +125,10 @@ void *chatSend(void *name) {
 	if ((sendSock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
 		die("socket() failed");
 	/* Construct the server address structure */
-	memset(&servAddr, 0, sizeof(servAddr));	/* Zero out structure */
-	servAddr.sin_family = AF_INET;			/* Internet addr family */
-	servAddr.sin_addr.s_addr = inet_addr(serverip);	/* Server IP address */
-	servAddr.sin_port = htons(CLIENT_SENDPORT);	/* Server port */
+	memset(&servAddr, 0, sizeof(servAddr));
+	servAddr.sin_family = AF_INET;
+	servAddr.sin_addr.s_addr = inet_addr(serverip);
+	servAddr.sin_port = htons(CLIENT_SENDPORT);
 	
 	buf = malloc((strlen(name)+10)*sizeof(char));
 	strcpy(buf,INITCODE);
